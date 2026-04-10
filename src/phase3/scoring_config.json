@@ -1,0 +1,14 @@
+{
+  "weights": {
+    "cuisine_match": 0.25,
+    "rating_score": 0.40,
+    "budget_fit": 0.20,
+    "preference_tag_match": 0.15
+  },
+  "budget_ranges": {
+    "low": [0, 800],
+    "medium": [801, 1800],
+    "high": [1801, 1000000]
+  },
+  "candidate_pool_size": 50
+}

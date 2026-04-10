@@ -1,0 +1,66 @@
+{
+  "source_columns": [
+    "url",
+    "address",
+    "name",
+    "online_order",
+    "book_table",
+    "rate",
+    "votes",
+    "phone",
+    "location",
+    "rest_type",
+    "dish_liked",
+    "cuisines",
+    "approx_cost(for two people)",
+    "reviews_list",
+    "menu_item",
+    "listed_in(type)",
+    "listed_in(city)"
+  ],
+  "raw_record_count": 51717,
+  "clean_record_count": 33594,
+  "duplicates_removed": 18123,
+  "schema_validation": {
+    "total_rows": 33594,
+    "valid_rows": 33594,
+    "invalid_rows": 0,
+    "missing_columns": [],
+    "nulls_by_column": {
+      "restaurant_id": 0,
+      "name": 0,
+      "city": 0,
+      "locality": 0,
+      "cuisines": 0,
+      "avg_cost_for_two": 216,
+      "currency": 0,
+      "rating": 0,
+      "votes": 0
+    },
+    "pass_rate": 100.0
+  },
+  "distribution": {
+    "top_cities": {
+      "Btm": 2194,
+      "Koramangala 7Th Block": 1908,
+      "Koramangala 5Th Block": 1854,
+      "Koramangala 4Th Block": 1837,
+      "Koramangala 6Th Block": 1714,
+      "Jayanagar": 1688,
+      "Jp Nagar": 1409,
+      "Hsr": 1158,
+      "Mg Road": 1132,
+      "Indiranagar": 1115
+    },
+    "rating_summary": {
+      "count": 33594.0,
+      "mean": 2.8695094362088467,
+      "std": 1.5583410125462216,
+      "min": 0.0,
+      "25%": 2.9,
+      "50%": 3.5,
+      "75%": 3.9,
+      "max": 4.9
+    }
+  }
+}

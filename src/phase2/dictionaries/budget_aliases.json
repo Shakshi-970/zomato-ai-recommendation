@@ -1,0 +1,14 @@
+{
+  "low": "low",
+  "cheap": "low",
+  "budget": "low",
+  "economical": "low",
+  "medium": "medium",
+  "mid": "medium",
+  "moderate": "medium",
+  "average": "medium",
+  "high": "high",
+  "premium": "high",
+  "expensive": "high",
+  "luxury": "high"
+}

@@ -1,0 +1,9 @@
+fastapi
+uvicorn[standard]
+pandas
+pyarrow
+groq
+python-dotenv
+pydantic
+cachetools
+streamlit
