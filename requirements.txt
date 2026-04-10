@@ -5,5 +5,3 @@ pyarrow
 groq
 python-dotenv
 pydantic
-cachetools
-streamlit
