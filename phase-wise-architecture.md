@@ -639,120 +639,139 @@ Track system quality, reduce failures, and continuously improve recommendation r
 | Layer | Platform | URL Pattern |
 |---|---|---|
 | Frontend (Next.js) | Vercel | `https://<project>.vercel.app` |
-| Backend (FastAPI) | Streamlit Cloud | `https://<app>.streamlit.app` |
+| Backend (FastAPI) | Vercel (Python Serverless) | `https://<backend-project>.vercel.app` |
+
+Both frontend and backend are deployed on Vercel as two separate projects from the same GitHub repository.
 
 ---
 
-### Frontend Deployment — Vercel
+### Why Not Streamlit Cloud?
+
+Streamlit Cloud was initially considered for the backend but was **ruled out** for the following reasons:
+
+| Issue | Detail |
+|---|---|
+| **Port restriction** | Streamlit Cloud only exposes port 8501 publicly via its nginx proxy. FastAPI runs on port 8080, which is completely blocked from external access. |
+| **Auth redirect** | All HTTP requests to the Streamlit Cloud URL are redirected to Streamlit's own authentication page (`share.streamlit.io/-/auth/app`), making REST API calls from the frontend impossible. |
+| **Platform mismatch** | Streamlit Cloud is designed for interactive data dashboards, not REST API backends. It has no mechanism to serve standard HTTP endpoints to external clients. |
+| **No workaround** | No code modification can bypass the nginx proxy restriction — it is enforced at the infrastructure level by Streamlit Cloud. |
+
+**Conclusion**: Streamlit Cloud cannot host a public-facing REST API. Vercel's Python Serverless Functions are the correct tool for this use case.
+
+---
+
+### Backend Deployment — Vercel (Python Serverless)
+
+**Platform**: [Vercel](https://vercel.com)
+**Runtime**: Python 3 (Serverless Functions via `@vercel/python`)
+
+#### How It Works
+Vercel runs Python files placed in the `api/` directory as serverless functions. The file `api/index.py` imports the FastAPI `app` object, and Vercel's ASGI adapter handles all incoming HTTP requests and routes them to FastAPI.
+
+#### Key Files Added
+- `api/index.py` — Vercel entry point that exposes the FastAPI app
+- `vercel.json` — Routes all requests to the Python handler
+
+```python
+# api/index.py
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from run_phase5_api import app  # Vercel uses this as the ASGI entry point
+```
+
+```json
+// vercel.json
+{
+  "version": 2,
+  "builds": [{ "src": "api/index.py", "use": "@vercel/python" }],
+  "routes": [{ "src": "/(.*)", "dest": "api/index.py" }]
+}
+```
+
+#### Steps to Deploy Backend
+1. Push the full project to GitHub.
+2. Go to [vercel.com](https://vercel.com) → **Add New Project**.
+3. Import the GitHub repository.
+4. Set **Root Directory** to `.` (project root).
+5. Set **Framework Preset** to `Other`.
+6. Under **Environment Variables**, add:
+   ```
+   GROQ_API_KEY = your_groq_api_key_here
+   ```
+7. Click **Deploy**.
+8. Vercel provides a public URL: `https://<backend-project>.vercel.app`
+
+---
+
+### Frontend Deployment — Vercel (Next.js)
 
 **Platform**: [Vercel](https://vercel.com)
 **Framework**: Next.js 14 (App Router)
 
-#### Steps to Deploy
-1. Push the `frontend-nextjs/` directory to a GitHub repository.
-2. Connect the repository to Vercel via the Vercel dashboard.
-3. Set the **Root Directory** to `frontend-nextjs` in project settings.
-4. Add the environment variable:
+#### Steps to Deploy Frontend
+1. Go to [vercel.com](https://vercel.com) → **Add New Project** (same repo, second project).
+2. Import the same GitHub repository.
+3. Set **Root Directory** to `frontend-nextjs`.
+4. Framework auto-detected as `Next.js`.
+5. Under **Environment Variables**, add:
    ```
-   NEXT_PUBLIC_API_URL=https://<your-streamlit-backend>.streamlit.app
+   NEXT_PUBLIC_API_URL = https://<backend-project>.vercel.app
    ```
-5. Vercel auto-detects Next.js and builds with `npm run build`.
-6. Every push to `main` triggers an automatic redeploy.
+   *(Use the URL from the backend deployment above)*
+6. Click **Deploy**.
 
 #### Configuration Notes
-- `next.config.js` already has `reactStrictMode: true` and `images.unoptimized: true` — compatible with Vercel out of the box.
-- The `dev` script in `package.json` uses `-p 3000` for local development only; Vercel uses `next build` + `next start` in production.
-- CORS on the backend must whitelist the Vercel deployment URL.
-
----
-
-### Backend Deployment — Streamlit Cloud
-
-**Platform**: [Streamlit Community Cloud](https://streamlit.io/cloud)
-**Framework**: FastAPI served via a Streamlit wrapper
-
-#### Streamlit Wrapper
-Streamlit Cloud runs Python apps via a `streamlit run` entrypoint. To expose the FastAPI backend, create a thin wrapper file `streamlit_app.py` at the project root:
-
-```python
-# streamlit_app.py
-import subprocess
-import streamlit as st
-
-st.title("Zomato AI Recommendation Backend")
-st.write("FastAPI backend is running via uvicorn.")
-
-# Launches the FastAPI server as a subprocess on port 8080
-subprocess.Popen(["uvicorn", "run_phase5_api:app", "--host", "0.0.0.0", "--port", "8080"])
-st.success("Backend server started on port 8080.")
-```
-
-#### Steps to Deploy
-1. Push the full project (including `streamlit_app.py`) to a GitHub repository.
-2. Go to [share.streamlit.io](https://share.streamlit.io) and connect the repository.
-3. Set **Main file path** to `streamlit_app.py`.
-4. Add secrets in the Streamlit Cloud dashboard under **Settings → Secrets**:
-   ```toml
-   GROQ_API_KEY = "your_groq_api_key_here"
-   ```
-5. Add a `requirements.txt` at the project root listing all Python dependencies.
-
-#### `requirements.txt` (key entries)
-```
-fastapi
-uvicorn
-pandas
-groq
-pydantic
-python-dotenv
-cachetools
-```
-
-#### CORS Configuration
-Update `run_phase5_api.py` to allow the Vercel frontend origin:
-```python
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-        "https://<your-project>.vercel.app",   # Add Vercel URL here
-    ],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-```
+- `next.config.js` has `reactStrictMode: true` and `images.unoptimized: true` — compatible with Vercel out of the box.
+- The `dev` script uses `-p 3000` for local development only; Vercel uses `next build` + `next start` in production.
+- Every push to `main` triggers automatic redeploy for both projects.
 
 ---
 
 ### Environment Variables Summary
 
-| Variable | Where Set | Value |
-|---|---|---|
-| `NEXT_PUBLIC_API_URL` | Vercel → Environment Variables | Streamlit backend URL |
-| `GROQ_API_KEY` | Streamlit → Secrets | Groq API key |
+| Variable | Project | Where Set | Value |
+|---|---|---|---|
+| `GROQ_API_KEY` | Backend | Vercel → Environment Variables | Groq API key |
+| `NEXT_PUBLIC_API_URL` | Frontend | Vercel → Environment Variables | Backend Vercel URL |
+
+---
+
+### `requirements.txt`
+Only API-required packages are listed. `streamlit` and `datasets` are excluded — they are not needed at runtime and would bloat the serverless function.
+
+```
+fastapi
+uvicorn[standard]
+pandas
+pyarrow
+groq
+python-dotenv
+pydantic
+```
 
 ---
 
 ### Data Files in Deployment
-- `data/restaurants_clean.csv` — must be committed to the repository so Streamlit Cloud can access it at runtime.
-- `data/users.json` and `data/sessions.json` — these are written at runtime. On Streamlit Cloud, the filesystem is ephemeral (resets on restart). For production persistence, migrate to a hosted database (e.g., Supabase, PlanetScale, or MongoDB Atlas).
+- `data/processed/restaurants_clean.csv` — committed to the repository (2.9 MB). Vercel reads it at runtime via the absolute path resolved from `__file__`.
+- `data/users.json` and `data/sessions.json` — written at runtime. Vercel's serverless filesystem is ephemeral (resets between cold starts). For production persistence, migrate to a hosted database (e.g., Supabase or MongoDB Atlas).
 
 ---
 
 ### Deployment Checklist
 
-**Backend (Streamlit)**
-- [ ] `streamlit_app.py` created at project root
-- [ ] `requirements.txt` updated with all dependencies
-- [ ] `GROQ_API_KEY` added to Streamlit secrets
-- [ ] CORS updated with Vercel frontend URL
-- [ ] `data/restaurants_clean.csv` committed to repo
+**Backend (Vercel)**
+- [ ] `api/index.py` created at project root
+- [ ] `vercel.json` created at project root
+- [ ] `requirements.txt` contains only runtime dependencies
+- [ ] `GROQ_API_KEY` added in Vercel environment variables
+- [ ] `data/processed/restaurants_clean.csv` committed to repo
+- [ ] Root directory set to `.` in Vercel project settings
 
 **Frontend (Vercel)**
-- [ ] `frontend-nextjs/` pushed to GitHub
-- [ ] Root directory set to `frontend-nextjs` in Vercel
-- [ ] `NEXT_PUBLIC_API_URL` set to Streamlit backend URL
+- [ ] Same repo imported as a second Vercel project
+- [ ] Root directory set to `frontend-nextjs`
+- [ ] `NEXT_PUBLIC_API_URL` set to backend Vercel URL
 - [ ] Production build passes (`npm run build`)
 
 ---

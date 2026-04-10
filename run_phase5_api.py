@@ -1,20 +1,10 @@
 """Phase 5 API Server - End-to-End Recommendation Service"""
 
 import logging
-import os
 from pathlib import Path
-
-# ── Environment loading ────────────────────────────────────────────────────
-# On Streamlit Cloud, secrets are injected as env vars automatically.
-# Locally, load from .env file.
-try:
-    import streamlit as st
-    if hasattr(st, "secrets") and "GROQ_API_KEY" in st.secrets:
-        os.environ["GROQ_API_KEY"] = st.secrets["GROQ_API_KEY"]
-except Exception:
-    pass
-
 from dotenv import load_dotenv
+
+# Load .env locally; on Vercel, env vars are injected via the dashboard
 load_dotenv(Path(__file__).parent / ".env")
 
 from fastapi import FastAPI
