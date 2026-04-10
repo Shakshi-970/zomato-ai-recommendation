@@ -1,15 +1,12 @@
 """
 Streamlit entrypoint for Streamlit Cloud deployment.
 
-Streamlit Cloud requires a `streamlit run` entrypoint. This file:
-1. Loads the GROQ_API_KEY from Streamlit secrets into the environment.
-2. Starts the FastAPI server (uvicorn) in a background daemon thread.
-3. Displays a simple status dashboard so the Streamlit app is not blank.
-
-The FastAPI backend is accessible at the same host on port 8080.
+Starts the FastAPI/uvicorn server in a background thread once per process,
+using a socket check to avoid 'address already in use' on Streamlit reruns.
 """
 
 import os
+import socket
 import threading
 import time
 
@@ -20,19 +17,27 @@ if "GROQ_API_KEY" in st.secrets:
     os.environ["GROQ_API_KEY"] = st.secrets["GROQ_API_KEY"]
 
 import uvicorn
-from run_phase5_api import app  # noqa: E402  (must come after secret injection)
+from run_phase5_api import app  # must come after secret injection
 
-# ── Start FastAPI in a background thread (runs once per process) ───────────
-_server_started = False
+PORT = 8080
+
+
+def _port_in_use(port: int) -> bool:
+    """Return True if something is already listening on the port."""
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.settimeout(1)
+        return s.connect_ex(("127.0.0.1", port)) == 0
+
 
 def _run_server():
-    uvicorn.run(app, host="0.0.0.0", port=8080, log_level="warning")
+    uvicorn.run(app, host="0.0.0.0", port=PORT, log_level="warning")
 
-if not _server_started:
+
+# ── Start server only if not already running ──────────────────────────────
+if not _port_in_use(PORT):
     thread = threading.Thread(target=_run_server, daemon=True)
     thread.start()
-    _server_started = True
-    time.sleep(2)  # Give uvicorn a moment to bind
+    time.sleep(2)  # give uvicorn time to bind
 
 # ── Streamlit status dashboard ─────────────────────────────────────────────
 st.set_page_config(
@@ -46,7 +51,7 @@ st.subheader("Backend API Status")
 
 col1, col2 = st.columns(2)
 col1.metric("Status", "Running ✅")
-col2.metric("Port", "8080")
+col2.metric("Port", str(PORT))
 
 st.markdown("---")
 st.markdown("### Available Endpoints")
@@ -54,7 +59,7 @@ st.markdown("### Available Endpoints")
 endpoints = {
     "`POST /auth/register`": "Register a new user",
     "`POST /auth/login`": "Login with existing credentials",
-    "`GET  /auth/me`": "Get current user from token",
+    "`GET  /auth/me`": "Verify session token",
     "`GET  /phase5/locations`": "List supported cities and localities",
     "`POST /phase5/recommend`": "Get AI-powered restaurant recommendations",
     "`GET  /phase5/health`": "Health check",
