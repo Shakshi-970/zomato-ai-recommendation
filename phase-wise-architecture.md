@@ -123,6 +123,10 @@ Convert user input into a standardized preference object ready for retrieval.
        - Medium: ₹800-₹1800
        - High: ₹1800+
      - No manual tier toggle needed
+   - **Budget Range Filter**:
+     - Input ₹300 → restaurants costing ₹300–₹400
+     - Input ₹400 → restaurants costing ₹400–₹500
+     - Input ₹1000+ → restaurants costing ₹1000 and above (open upper bound)
 
 4. **Preference Profile Builder** ✅
    - Builds final internal object.
@@ -211,6 +215,10 @@ Efficiently shortlist relevant restaurants before expensive LLM calls.
 ### Core Components
 1. **Hard Filter Engine**
    - Filters by city, rating threshold, budget window.
+   - **Budget window logic**:
+     - Budget < ₹1000 → `[budget, budget + 100)` (e.g., ₹300 shows ₹300–₹400)
+     - Budget ≥ ₹1000 → `>= budget` (open upper bound, e.g., ₹1000 shows ₹1000+)
+   - **Rating filter**: `rating >= min_rating` (at-least logic, not a bucket window)
 2. **Cuisine and Preference Matcher**
    - Scores cuisine and tag match.
 3. **Heuristic Pre-Ranker**

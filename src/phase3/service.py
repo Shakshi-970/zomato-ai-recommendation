@@ -60,8 +60,8 @@ class CandidateRetrievalService:
 
         cost = float(row["avg_cost_for_two"])
         if pref.budget_amount is not None and pref.budget_amount > 0:
-            b_lower = float(pref.budget_amount)
-            budget_fit = 1.0 if b_lower <= cost < b_lower + 100.0 else 0.0
+            b = float(pref.budget_amount)
+            budget_fit = 1.0 if (b >= 1000 and cost >= b) or (b < 1000 and b <= cost < b + 100.0) else 0.0
         else:
             min_budget, max_budget = self._budget_window(pref.budget_tier)
             budget_fit = 1.0 if min_budget <= cost <= max_budget else 0.0
@@ -126,22 +126,19 @@ class CandidateRetrievalService:
         else:
             location_mask = city_match
 
-        # Rating range filter: input 1→[1,2), 2→[2,3), 3→[3,4), 4→[4,5]
+        # Rating filter: minimum rating — show all restaurants rated >= min_rating
         if pref.min_rating > 0:
-            lower = float(int(pref.min_rating))
-            if lower >= 4:
-                rating_mask = self.df["rating"] >= 4.0
-            else:
-                rating_mask = (self.df["rating"] >= lower) & (self.df["rating"] < lower + 1.0)
+            rating_mask = self.df["rating"] >= float(int(pref.min_rating))
         else:
             rating_mask = self.df["rating"] >= 0.0
 
-        # Budget range filter: user enters N → restaurants in [N, N+100)
-        # If no budget given, skip filter
+        # Budget filter: [budget, budget+100) for <1000; >=1000 for budget>=1000
         if pref.budget_amount is not None and pref.budget_amount > 0:
-            b_lower = float(pref.budget_amount)
-            b_upper = b_lower + 100.0
-            budget_mask = (self.df["avg_cost_for_two"] >= b_lower) & (self.df["avg_cost_for_two"] < b_upper)
+            b = float(pref.budget_amount)
+            if b >= 1000:
+                budget_mask = self.df["avg_cost_for_two"] >= b
+            else:
+                budget_mask = (self.df["avg_cost_for_two"] >= b) & (self.df["avg_cost_for_two"] < b + 100.0)
         else:
             budget_mask = self.df["avg_cost_for_two"] >= 0.0
 
