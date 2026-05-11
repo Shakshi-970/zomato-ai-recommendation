@@ -5,3 +5,4 @@ pyarrow
 groq
 python-dotenv
 pydantic
+psycopg[binary]
