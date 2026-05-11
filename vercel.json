@@ -1,12 +1,18 @@
 {
-  "buildCommand": "pip install -r requirements.txt && cd frontend-nextjs && npm install && npm run build",
+  "buildCommand": "cd frontend-nextjs && npm install && npm run build",
   "outputDirectory": "frontend-nextjs/.next",
   "framework": "nextjs",
   "functions": {
     "api/index.py": {
       "memory": 1024,
       "maxDuration": 60,
-      "runtime": "@vercel/python@6.39.0"
+      "includeFiles": "{data/processed/**,src/**,run_phase5_api.py}"
     }
-  }
+  },
+  "rewrites": [
+    { "source": "/phase5/:path*", "destination": "/api/index" },
+    { "source": "/auth/:path*", "destination": "/api/index" },
+    { "source": "/docs", "destination": "/api/index" },
+    { "source": "/openapi.json", "destination": "/api/index" }
+  ]
 }
