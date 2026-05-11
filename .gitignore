@@ -26,9 +26,11 @@ data/raw/
 !data/processed/restaurants_clean.csv
 
 # Next.js / Node
-frontend-nextjs/.next/
-frontend-nextjs/node_modules/
-frontend-nextjs/.env.local
+.next/
+node_modules/
+.env.local
+.env.*.local
+.vercel/
 
 # Logs
 *.log
